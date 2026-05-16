@@ -23,7 +23,20 @@ tailscale_hostname: "{{ hostname }}"
 # Helm version
 helm_version: "v3.14.4"
 
-# Network
+# Network — k3s internal
 k3s_pod_cidr: "10.42.0.0/16"
 k3s_service_cidr: "10.43.0.0/16"
-local_subnet: "192.168.1.0/24"  # CHANGE to your local subnet
+local_subnet: "192.168.1.0/24"  # CHANGE: your home LAN subnet
+
+# Network — static IP via Netplan (Ubuntu Server)
+# Set network_configure_static_ip: true to apply a static IP via Ansible.
+# WARNING: the SSH connection will briefly drop while Netplan applies the new IP.
+# After this, update ansible_host in inventory/hosts.yml to the new static IP.
+network_configure_static_ip: false
+network_interface: "eno1"          # CHANGE: run 'ip link show' to find your interface name
+network_static_ip: "192.168.1.100" # CHANGE: desired static IP for the server
+network_prefix_length: 24          # 24 = /24 = 255.255.255.0
+network_gateway: "192.168.1.1"     # CHANGE: your router/gateway IP
+network_dns:
+  - "1.1.1.1"
+  - "8.8.8.8"

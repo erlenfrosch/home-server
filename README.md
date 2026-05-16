@@ -37,6 +37,8 @@ Everything is managed as code. Push to git → ArgoCD picks it up → your clust
 
 ## Quick Start
 
+> **Neu hier?** Zuerst Ubuntu Server 22.04 LTS installieren: [docs/00-ubuntu-server-install.md](docs/00-ubuntu-server-install.md)
+>
 > Prerequisites: Ansible >= 2.14, SSH key access to your server, Tailscale account.
 > Full details in [docs/02-prerequisites.md](docs/02-prerequisites.md).
 
@@ -156,12 +158,13 @@ home-server/
 
 ## Documentation Links
 
-| Document                                         | Description                              |
-|--------------------------------------------------|------------------------------------------|
-| [Architecture Overview](docs/01-overview.md)     | System design and component diagram      |
-| [Prerequisites](docs/02-prerequisites.md)        | Requirements and pre-flight checklist    |
-| [Installation Guide](docs/03-installation.md)    | Full step-by-step setup walkthrough      |
-| [k3s Reference](docs/04-k3s.md)                  | k3s config, kubectl cheatsheet           |
-| [ArgoCD GitOps Guide](docs/05-argocd.md)         | Managing apps with ArgoCD                |
-| [Tailscale VPN Guide](docs/06-tailscale.md)      | VPN setup and client connection          |
-| [Troubleshooting](docs/07-troubleshooting.md)    | Common issues and debug commands         |
+| Document                                                      | Description                              |
+|---------------------------------------------------------------|------------------------------------------|
+| [Ubuntu Server Installation](docs/00-ubuntu-server-install.md)| ISO herunterladen, installieren, vorbereiten |
+| [Architecture Overview](docs/01-overview.md)                  | System design and component diagram      |
+| [Prerequisites](docs/02-prerequisites.md)                     | Requirements and pre-flight checklist    |
+| [Installation Guide](docs/03-installation.md)                 | Full step-by-step setup walkthrough      |
+| [k3s Reference](docs/04-k3s.md)                               | k3s config, kubectl cheatsheet           |
+| [ArgoCD GitOps Guide](docs/05-argocd.md)                      | Managing apps with ArgoCD                |
+| [Tailscale VPN Guide](docs/06-tailscale.md)                   | VPN setup and client connection          |
+| [Troubleshooting](docs/07-troubleshooting.md)                 | Common issues and debug commands         |

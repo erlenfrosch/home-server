@@ -238,3 +238,35 @@
 - name: Display UFW status
   ansible.builtin.debug:
     var: ufw_status.stdout_lines
+
+# ---- Static IP via Netplan ----------------------------------
+- name: Configure static IP via Netplan
+  when: network_configure_static_ip | bool
+  block:
+    - name: Remove existing Netplan DHCP configs
+      ansible.builtin.shell: >
+        find /etc/netplan -name '*.yaml' -o -name '*.yml' | xargs rm -f
+      changed_when: true
+
+    - name: Deploy static Netplan configuration
+      ansible.builtin.template:
+        src: netplan-static.yaml.j2
+        dest: /etc/netplan/99-static.yaml
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Apply Netplan configuration (connection will briefly drop)
+      ansible.builtin.command: netplan apply
+      async: 10
+      poll: 0
+      changed_when: true
+
+    - name: Wait for server to be reachable at new IP ({{ network_static_ip }})
+      ansible.builtin.wait_for:
+        host: "{{ network_static_ip }}"
+        port: 22
+        delay: 5
+        timeout: 60
+      delegate_to: localhost
+      become: false
