@@ -80,6 +80,7 @@
     --all
     --namespace {{ argocd_namespace }}
     --timeout=300s
+    --field-selector=status.phase!=Succeeded
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   register: argocd_pods_ready
