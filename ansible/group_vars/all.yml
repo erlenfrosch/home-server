@@ -50,11 +50,19 @@ argocd_repo_revision: HEAD
 # and ALWAYS store it vault-encrypted, e.g.:
 #   ansible-vault encrypt_string 'tskey-auth-...' --name 'tailscale_auth_key'
 # then paste the resulting `!vault |` block over the value below.
-tailscale_auth_key: "CHANGE_ME_USE_VAULT"
+tailscale_auth_key: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          32326136363530346431653061613536623865653235613933653634623030656664396333643663
+          6532373339613461656334363131656232336638393063350a666365636134363935333833303165
+          31363564363865663031356334616233306335333338343633333234376634636662316239306536
+          3935623934383737640a386362353836336136613961653661393138656130386335373237666337
+          30313862303036646437666263616365643062316239326132613365336636386234633634363432
+          31313761323532383432643737326330333631373939363334383833616161663536393433386137
+          333862306665313536613562376464613461
 tailscale_hostname: "{{ hostname }}"
 
 # ---- Local network ----------------------------------------
-local_subnet: "192.168.1.0/24"         # CHANGE: your home LAN CIDR
+local_subnet: "192.168.178.0/24"
 
 # ---- Optional: configure a static IP via Netplan ----------
 # Set to true to have Ansible deploy /etc/netplan/99-static.yaml.
@@ -63,9 +71,9 @@ local_subnet: "192.168.1.0/24"         # CHANGE: your home LAN CIDR
 # (or update it after the first run).
 network_configure_static_ip: false
 network_interface: "eno1"              # CHANGE: run `ip link show` on the server
-network_static_ip: "192.168.1.100"     # CHANGE: desired static IP
+network_static_ip: "192.168.178.127"
 network_prefix_length: 24              # 24 = /24 = 255.255.255.0
-network_gateway: "192.168.1.1"         # CHANGE: your router's IP
+network_gateway: "192.168.178.1"
 network_dns:
   - "1.1.1.1"
   - "8.8.8.8"

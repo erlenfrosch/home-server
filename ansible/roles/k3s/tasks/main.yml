@@ -106,42 +106,42 @@
 # ---- kubeconfig Setup for ubuntu user ----------------------
 - name: Create .kube directory for ubuntu user
   ansible.builtin.file:
-    path: /home/ubuntu/.kube
+    path: /home/{{ ansible_user }}/.kube
     state: directory
-    owner: ubuntu
-    group: ubuntu
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
     mode: '0700'
 
 - name: Copy k3s kubeconfig to ubuntu user
   ansible.builtin.copy:
     src: /etc/rancher/k3s/k3s.yaml
-    dest: /home/ubuntu/.kube/config
+    dest: /home/{{ ansible_user }}/.kube/config
     remote_src: true
-    owner: ubuntu
-    group: ubuntu
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
     mode: '0600'
 
 - name: Set KUBECONFIG in /etc/environment (system-wide)
   ansible.builtin.lineinfile:
     path: /etc/environment
     regexp: '^KUBECONFIG='
-    line: 'KUBECONFIG=/home/ubuntu/.kube/config'
+    line: 'KUBECONFIG=/home/{{ ansible_user }}/.kube/config'
     state: present
 
 - name: Set KUBECONFIG in ubuntu user's .bashrc
   ansible.builtin.lineinfile:
-    path: /home/ubuntu/.bashrc
+    path: /home/{{ ansible_user }}/.bashrc
     regexp: '^export KUBECONFIG='
-    line: 'export KUBECONFIG=/home/ubuntu/.kube/config'
+    line: 'export KUBECONFIG=/home/{{ ansible_user }}/.kube/config'
     state: present
     create: true
-    owner: ubuntu
-    group: ubuntu
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
     mode: '0644'
 
 - name: Add kubectl completion and `k` alias to ubuntu user's .bashrc
   ansible.builtin.blockinfile:
-    path: /home/ubuntu/.bashrc
+    path: /home/{{ ansible_user }}/.bashrc
     marker: "# {mark} ANSIBLE MANAGED BLOCK — kubectl"
     block: |
       # kubectl shell completion
@@ -151,8 +151,8 @@
         complete -o default -F __start_kubectl k
       fi
     create: true
-    owner: ubuntu
-    group: ubuntu
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
     mode: '0644'
 
 # ---- Helm Installation -------------------------------------
