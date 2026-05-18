@@ -35,6 +35,16 @@
     - tcp
     - udp
 
+- name: Allow DNS from Tailnet (UFW)
+  community.general.ufw:
+    rule: allow
+    port: "53"
+    proto: "{{ item }}"
+    src: "100.64.0.0/10"
+  loop:
+    - tcp
+    - udp
+
 - name: Enable and start dnsmasq
   ansible.builtin.systemd:
     name: dnsmasq

@@ -8,42 +8,41 @@ nie wieder eine YAML-Datei an, um eine neue Aktion auszulösen.
 
 ## Was du am Ende hast
 
-- **`http://semaphore.homeserver`** im LAN — funktioniert sofort, weil
-  dnsmasq auf dem Home-Server `*.homeserver` Wildcards bedient.
+- **`http://semaphore.homeserver`** im LAN und im Tailnet — dnsmasq
+  hört auf der LAN-IP **und** auf `tailscale0`, also kommt jeder
+  Tailscale-Client an die `*.homeserver`-Namen ran.
 - Ein-Klick-Run von Playbooks aus beliebigen Git-Repos
   (z.B. `home-server`, `ugreen-paperless`, später beliebig viele mehr).
 - Geteilter SSH-Key, der von Ansible verwaltet und automatisch auf alle
   konfigurierten Targets (Raspberry Pi, UGREEN NAS, …) verteilt wird.
 - Geteiltes Ansible-Vault-Password, sicher in einem k8s Secret abgelegt.
 
-### Zugriff über Tailscale von unterwegs
+### Zugriff über Tailscale (einmaliger Admin-Schritt)
 
-Das aktuelle Setup bindet dnsmasq absichtlich nur an die LAN-IP, damit
-es nicht mit systemd-resolved kollidiert. Damit auflöst
-`semaphore.homeserver` aus dem Tailnet heraus *nicht* automatisch.
-Drei pragmatische Wege:
+dnsmasq lauscht serverseitig schon auf `tailscale0` — fehlt nur noch,
+dass deine Tailscale-Clients den Home-Server als Nameserver für die
+`homeserver`-Domain nutzen:
 
-1. **`/etc/hosts` Eintrag** auf dem Tailscale-Client:
+1. Tailscale-IP des Home-Servers ablesen:
+   ```bash
+   ssh jaydee@homeserver "tailscale ip -4"
+   # z.B. 100.78.12.34
    ```
-   100.x.y.z   semaphore.homeserver argocd.homeserver headlamp.homeserver
-   ```
-   (`100.x.y.z` ist die Tailscale-IP deines Home-Servers, sichtbar mit
-   `tailscale ip -4` auf dem Server). Easiest fix, kein Server-Change.
+2. [Tailscale Admin Console → DNS](https://login.tailscale.com/admin/dns)
+   öffnen:
+   - **Nameservers → Add nameserver → Custom**
+   - IP-Adresse aus Schritt 1 eintragen
+   - **Restrict to domain** anhaken, Domain `homeserver` eintippen
+   - Speichern
+3. Fertig. Auf jedem Tailscale-Client (Laptop, Handy, ...) löst
+   `semaphore.homeserver`, `argocd.homeserver` etc. jetzt sofort auf
+   die Server-IP auf und Traefik macht das Host-basierte Routing.
 
-2. **Tailscale Subnet Routes + Split DNS** (sauberer): aktiviere für
-   den Subnet-Route-Advertise-Flag im Tailscale-Admin den
-   192.168.178.0/24-Range deines LANs, ergänze unter *DNS* einen
-   Split-DNS-Eintrag `homeserver` → `192.168.178.127`. Damit fragt der
-   Tailscale-Client für `*.homeserver` direkt deinen dnsmasq, der über
-   die Subnet-Route erreichbar ist.
-
-3. **Verzicht auf den Hostname**: greife per
-   `http://<tailscale-ip>:30080` für ArgoCD / per Port-Forward für
-   Semaphore zu — funktioniert ohne DNS-Anpassung, aber ohne Friendly
-   Names.
-
-Frag mich, falls du Variante 2 dauerhaft im Repo verankert haben willst —
-das wäre eine kleine Erweiterung der `dnsmasq`-Role + UFW-Regel.
+Test:
+```bash
+nslookup semaphore.homeserver
+# → sollte 192.168.178.127 (oder die Tailscale-IP via Subnet-Route) liefern
+```
 
 ## Architektur in zehn Sekunden
 
