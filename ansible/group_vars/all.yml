@@ -71,6 +71,7 @@ dnsmasq_hosts:
   - headlamp
   - argocd
   - semaphore
+  - grafana
   - kubeseal-webgui
 
 # ---- Semaphore UI -----------------------------------------
