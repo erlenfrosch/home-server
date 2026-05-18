@@ -46,7 +46,7 @@ spec:
                 || true
           env:
             - name: SEMAPHORE_DB_DIALECT
-              value: "sqlite3"
+              value: "sqlite"
             - name: SEMAPHORE_DB_HOST
               value: "/etc/semaphore/database.db"
             - name: SEMAPHORE_ADMIN
