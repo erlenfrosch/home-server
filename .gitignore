@@ -35,3 +35,7 @@ kubeconfig
 # Lint caches
 .ansible-lint-cache/
 .yamllint.cache
+
+# Claude Code local config (personal settings and memory)
+.claude/settings.local.json
+.claude/memory/
