@@ -21,6 +21,7 @@ make k3s            # Kubernetes + Helm role
 make argocd         # GitOps controller role
 make semaphore      # Bootstrap Semaphore Secret on the home-server
 make semaphore-targets  # Push Semaphore SSH key to all managed targets
+make semaphore-bootstrap # Provision Projects/Repos/Inventories/Templates in Semaphore via API
 
 make lint           # yamllint + ansible-lint + helm lint
 make vault-edit     # Edit vault-encrypted vars (ansible/group_vars/all.yml)
@@ -111,6 +112,7 @@ The Tailscale auth key (`tailscale_auth_key`) must always be vault-encrypted. Ne
 | `k3s_channel` / `k3s_version` | Pin or float k3s version |
 | `argocd_repo_url` | Git repo ArgoCD syncs from |
 | `tailscale_auth_key` | Vault-encrypted WireGuard auth key |
+| `semaphore_vault_password` | Vault-encrypted Ansible Vault password Semaphore uses to decrypt secrets in triggered playbooks |
 
 ## Monitoring
 
@@ -129,6 +131,8 @@ The Tailscale auth key (`tailscale_auth_key`) must always be vault-encrypted. Ne
 - **Helm OCI charts**: Some apps (e.g. `kubeseal-webgui`) use OCI registries (`oci://ghcr.io/...`). The `repository:` field must use the `oci://` prefix — HTTP Helm repo URLs will 404 even if the chart exists at the OCI registry.
 - **Grafana sidecar + dashboards conflict**: Setting both `grafana.sidecar.dashboards.enabled: true` and `grafana.dashboards:` in the same values file causes a Helm template error. Use the sidecar only; default dashboards are shipped via labeled ConfigMaps.
 - **Grafana fresh DB**: If Grafana crashes with `no such column: is_service_account`, delete the corrupt `grafana.db` directly from the PVC on the host and restart the deployment. The PVC path is `/var/lib/rancher/k3s/storage/<pvc-name>_monitoring_monitoring-grafana/`.
+- **Semaphore bootstrap — first-run 400s**: `make semaphore-bootstrap` idempotently skips existing resources, but on the very first run each resource type (keys, repos, inventories, templates) may get a 400 from the Ansible `uri` module. Re-run until it completes; subsequent runs are clean.
+- **Semaphore targets — SSH key prerequisite**: Before running `make semaphore-targets`, the Semaphore SSH public key must be authorized on each managed target. Fetch the pubkey from the server (`sudo cat /etc/semaphore-secrets/id_ed25519.pub`) and add it via `ssh-copy-id` or directly to `~/.ssh/authorized_keys` on the target host.
 
 ## Claude Skills
 
