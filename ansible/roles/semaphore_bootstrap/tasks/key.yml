@@ -1,0 +1,68 @@
+---
+# ============================================================
+# Provision one access key inside the current project.
+# Type "ssh" carries the Semaphore-owned id_ed25519 private key;
+# type "none" is for public-HTTPS git repositories.
+# ============================================================
+
+- name: List existing keys in project {{ project_spec.name }}
+  ansible.builtin.uri:
+    url: "{{ semaphore_api_base }}/api/project/{{ project_id }}/keys"
+    method: GET
+    headers:
+      Cookie: "{{ semaphore_cookie }}"
+    return_content: true
+  register: sem_keys_existing
+
+- name: Decide if key exists in project {{ project_spec.name }}
+  ansible.builtin.set_fact:
+    key_exists: >-
+      {{ (sem_keys_existing.json
+          | selectattr('name', 'equalto', key_spec.name)
+          | list | length) > 0 }}
+
+- name: Read Semaphore SSH private key from disk
+  ansible.builtin.slurp:
+    src: "{{ semaphore_ssh_private_key_path }}"
+  register: sem_ssh_priv_slurp
+  no_log: true
+  when:
+    - not key_exists
+    - key_spec.type == "ssh"
+
+- name: Create SSH access key in project {{ project_spec.name }}
+  ansible.builtin.uri:
+    url: "{{ semaphore_api_base }}/api/project/{{ project_id }}/keys"
+    method: POST
+    body_format: json
+    body:
+      name: "{{ key_spec.name }}"
+      type: ssh
+      project_id: "{{ project_id | int }}"
+      ssh:
+        login: "{{ key_spec.login }}"
+        passphrase: ""
+        private_key: "{{ sem_ssh_priv_slurp.content | b64decode }}"
+    headers:
+      Cookie: "{{ semaphore_cookie }}"
+    status_code: [200, 201, 204]
+  no_log: true
+  when:
+    - not key_exists
+    - key_spec.type == "ssh"
+
+- name: Create None access key in project {{ project_spec.name }}
+  ansible.builtin.uri:
+    url: "{{ semaphore_api_base }}/api/project/{{ project_id }}/keys"
+    method: POST
+    body_format: json
+    body:
+      name: "{{ key_spec.name }}"
+      type: none
+      project_id: "{{ project_id | int }}"
+    headers:
+      Cookie: "{{ semaphore_cookie }}"
+    status_code: [200, 201, 204]
+  when:
+    - not key_exists
+    - key_spec.type == "none"

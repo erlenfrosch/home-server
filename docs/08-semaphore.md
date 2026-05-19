@@ -146,55 +146,80 @@ ein Pod startet, Traefik routet `semaphore.homeserver` darauf.
 kubectl -n semaphore get pods,svc,ingress
 ```
 
-## Erstes Project anlegen (Workflow am Beispiel `ugreen-paperless`)
+## Projekte werden automatisch angelegt
 
-1. Browser auf `http://semaphore.homeserver` → Login mit `admin` +
-   ausgelesenem Passwort.
-2. **Passwort sofort ändern** (oben rechts → Settings → Change Password).
-3. **Create New Project** → Name z.B. `ugreen-paperless`.
+Nach `make install` (genauer: nach der Rolle `semaphore_bootstrap`) sind in
+Semaphore **zwei Projekte schon vollständig konfiguriert** — Key Store,
+Repository, Inventory und Task Template inklusive. Du musst in der UI
+nichts mehr klicken außer ▶ **Run**.
 
-Innerhalb des Projects in dieser Reihenfolge anlegen:
+| Project              | Repository                                                | Inventory   | Template                  | Playbook              |
+|----------------------|-----------------------------------------------------------|-------------|---------------------------|-----------------------|
+| `home-server`        | dieses Repo (`argocd_repo_url` aus `group_vars/all.yml`)  | `homeservers` (192.168.178.127) | `Deploy Home Server`      | `ansible/site.yml`    |
+| `ugreen-paperless`   | `https://github.com/Jaydee94/ugreen-paperless.git`        | `ugreen-nas` (192.168.178.118)  | `Deploy ugreen-paperless` | `ugreen-paperless.yml`|
 
-### a) Key Store
+### Workflow
 
-- **`semaphore-ssh-key`** (Type: *SSH Key*)
-  Auf dem Home-Server: `sudo cat /etc/semaphore-secrets/id_ed25519`.
-  Inhalt in die UI pasten. *Dieser Schritt ist die einzige manuelle
-  Kopie — danach lebt der Key in Semaphores eigener Encrypted-DB.*
-- **`git-https-noauth`** (Type: *None*) — für öffentliche Repos.
-  Für ein privates Repo stattdessen *Login With Password* + GitHub PAT.
+1. Browser auf `http://semaphore.homeserver`.
+2. Login mit `admin` + Passwort aus `/etc/semaphore-secrets/admin_password`:
+   ```bash
+   ssh jaydee@homeserver "sudo cat /etc/semaphore-secrets/admin_password"
+   ```
+3. **Passwort sofort ändern** (oben rechts → Settings → Change Password).
+   ⚠️ Wenn du das tust, kann das nächste `make semaphore-bootstrap` sich
+   nicht mehr einloggen, bis du das neue Passwort wieder in
+   `/etc/semaphore-secrets/admin_password` ablegst.
+4. Projekt auswählen → Template → ▶ **Run**. Live-Log erscheint sofort.
 
-### b) Repository
+### Weitere Projekte hinzufügen
 
-- URL: `https://github.com/Jaydee94/ugreen-paperless.git`
-- Branch: `main` (oder was du nutzt)
-- Access Key: `git-https-noauth`
+`semaphore_projects` in `ansible/group_vars/all.yml` (oder direkt in der
+Default-Liste in `ansible/roles/semaphore_bootstrap/defaults/main.yml`)
+erweitern und `make semaphore-bootstrap` laufen lassen:
 
-### c) Inventory
+```yaml
+semaphore_projects:
+  - name: home-server          # existierende Defaults beibehalten
+    # ...
+  - name: ugreen-paperless
+    # ...
+  - name: my-new-project       # neu
+    repository:
+      name: my-new-project-git
+      url: https://github.com/me/my-repo.git
+      branch: main
+    inventories:
+      - name: my-targets
+        type: static
+        ssh_key: semaphore-ssh-key
+        content: |
+          [targets]
+          host1 ansible_host=192.168.178.99
+    templates:
+      - name: "Deploy My Thing"
+        playbook: site.yml
+        inventory: my-targets
+```
 
-- Type: **Static**
-- Inhalt:
-  ```ini
-  [ugreen]
-  ugreen ansible_host=192.168.178.40 ansible_user=jaydee
-  ```
-- SSH Key: `semaphore-ssh-key`
+**Wichtig:** das Auto-Bootstrap legt Resourcen **nur an, wenn sie noch
+nicht existieren** (skip-if-exists). Wenn du eine bestehende Inventory
+oder ein bestehendes Template ändern willst, lösche sie in der UI und
+führe `make semaphore-bootstrap` erneut aus — sie werden frisch angelegt.
 
-### d) Environment (optional)
+## Manuelles Anlegen (Fallback / ad-hoc)
 
-Wenn dein Playbook extra Variablen oder ENV-Werte braucht, hier hinterlegen.
-Sonst leer lassen.
+Wenn du ein Einmal-Projekt willst, das nicht in Git stehen soll, kannst
+du es per UI anlegen:
 
-### e) Task Template
-
-- Name: `Deploy Paperless`
-- Playbook Filename: `site.yml` (oder wie er bei dir heißt)
-- Inventory: das eben angelegte
-- Repository: das eben angelegte
-- Environment: leer oder das eben angelegte
-- *Run on*: `manual` (oder ein Cron-Schedule)
-
-**Save → ▶ Run.** Live-Log erscheint sofort.
+1. **Create New Project** → Name vergeben.
+2. **Key Store**:
+   - `semaphore-ssh-key` (Type *SSH Key*) — Inhalt aus
+     `/etc/semaphore-secrets/id_ed25519` einfügen.
+   - `git-none` (Type *None*) für öffentliche Repos.
+3. **Repository** → URL, Branch, Access Key = `git-none`.
+4. **Inventory** → Type *Static*, Inhalt im INI-Format, SSH Key = `semaphore-ssh-key`.
+5. **Task Template** → Playbook-Pfad, Inventory + Repository auswählen.
+6. **Save → ▶ Run.**
 
 ## Tipps
 
@@ -220,3 +245,4 @@ Sonst leer lassen.
 | Pod CrashLoopBackOff              | `kubectl -n semaphore logs deploy/semaphore` — meist fehlt das Bootstrap-Secret |
 | Playbook scheitert mit "Permission denied (publickey)" | `make semaphore-targets` lief nicht — Public Key fehlt in authorized_keys auf dem Ziel |
 | Vault-Passwort wird nicht erkannt | `semaphore_ansible_vault_password` ist leer oder mit falschem PW verschlüsselt |
+| `semaphore-bootstrap` failt beim Login | Admin-PW in der UI geändert ohne `/etc/semaphore-secrets/admin_password` zu syncen, oder PVC enthält noch alte DB. Fix: PW dort hinterlegen oder PVC neu (löscht alle Projekte!). |

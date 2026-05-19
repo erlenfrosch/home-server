@@ -89,6 +89,19 @@ dnsmasq_hosts:
 # works for non-encrypted playbooks.
 semaphore_ansible_vault_password: ""
 
+# ---- Semaphore projects (auto-bootstrap) ------------------
+# After Semaphore is reachable, the `semaphore_bootstrap` role calls the
+# Semaphore REST API and idempotently creates two projects:
+#
+#   - home-server      (this repo, deployed against the home-server itself)
+#   - ugreen-paperless (https://github.com/Jaydee94/ugreen-paperless.git
+#                       deployed to the UGREEN NAS)
+#
+# To add a third project, copy/extend the `semaphore_projects` list from
+# ansible/roles/semaphore_bootstrap/defaults/main.yml here. The role only
+# creates resources that don't already exist — to change an existing one,
+# delete it in the UI and re-run `make semaphore-bootstrap`.
+
 # ---- Optional: configure a static IP via Netplan ----------
 # Set to true to have Ansible deploy /etc/netplan/99-static.yaml.
 # WARNING: the SSH session will briefly drop while the new IP is applied.
