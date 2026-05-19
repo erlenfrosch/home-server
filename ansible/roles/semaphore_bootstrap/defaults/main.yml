@@ -1,0 +1,80 @@
+---
+# ============================================================
+# semaphore_bootstrap — defaults
+# ============================================================
+# After `semaphore_secrets` has produced the bootstrap material and
+# ArgoCD has rolled out the Semaphore Pod, this role talks to the
+# Semaphore REST API and provisions Projects / Keys / Repositories /
+# Inventories / Templates so the UI is ready to use without manual
+# clicks.
+
+# Base URL Ansible uses to call the Semaphore REST API. The home-server
+# itself resolves `semaphore.homeserver` via dnsmasq → Traefik → Pod.
+# Override to e.g. `http://semaphore.semaphore.svc.cluster.local:3000`
+# if the dnsmasq path is not yet up when the role runs.
+semaphore_api_base: "http://semaphore.homeserver"
+
+# Where `semaphore_secrets` persisted the admin password.
+semaphore_admin_password_path: "/etc/semaphore-secrets/admin_password"
+semaphore_admin_username: admin
+
+# Path to the Semaphore-owned SSH private key on the home-server.
+semaphore_ssh_private_key_path: "/etc/semaphore-secrets/id_ed25519"
+
+# Readiness polling — start of the API may lag behind the rollout
+# because the initContainer must finish creating the admin user first.
+semaphore_api_ready_retries: 60   # 60 * 5s = 5 min
+semaphore_api_ready_delay: 5
+
+# Two access keys are created in every project — name them once here.
+# `login` is only relevant for the ssh-type entry.
+semaphore_default_keys:
+  - name: semaphore-ssh-key
+    type: ssh
+    login: jaydee
+  - name: git-none
+    type: none
+
+# ============================================================
+# Desired state: list of projects to provision in Semaphore.
+# Override in group_vars/all.yml to add more projects without
+# editing the role.
+# ============================================================
+semaphore_projects:
+  - name: home-server
+    description: "Deploy / re-provision the home-server itself."
+    repository:
+      name: home-server-git
+      url: "{{ argocd_repo_url }}"
+      branch: main
+    inventories:
+      - name: homeservers
+        type: static
+        ssh_key: semaphore-ssh-key
+        content: |
+          [homeservers]
+          homeserver ansible_host=192.168.178.127
+    templates:
+      - name: "Deploy Home Server"
+        playbook: ansible/site.yml
+        inventory: homeservers
+        description: "Run the full site.yml against the home-server (recursive)."
+
+  - name: ugreen-paperless
+    description: "Deploy Paperless-ngx on the UGREEN NAS."
+    repository:
+      name: ugreen-paperless-git
+      url: "https://github.com/Jaydee94/ugreen-paperless.git"
+      branch: main
+    inventories:
+      - name: ugreen-nas
+        type: static
+        ssh_key: semaphore-ssh-key
+        content: |
+          [ugreen]
+          ugreen ansible_host=192.168.178.118
+    templates:
+      - name: "Deploy ugreen-paperless"
+        playbook: ugreen-paperless.yml
+        inventory: ugreen-nas
+        description: "Provision Paperless-ngx stack on the UGREEN NAS."

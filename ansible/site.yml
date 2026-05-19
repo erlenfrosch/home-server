@@ -53,3 +53,16 @@
   tags: [semaphore, semaphore-targets]
   roles:
     - role: semaphore_targets
+
+# ============================================================
+# After Semaphore is up and reachable, talk to its REST API and
+# provision Projects / Keys / Repositories / Inventories /
+# Templates so the UI is ready to use with zero manual clicks.
+# ============================================================
+- name: Bootstrap Semaphore projects via API
+  hosts: homeservers
+  become: true
+  gather_facts: false
+  tags: [semaphore, semaphore-bootstrap]
+  roles:
+    - role: semaphore_bootstrap
