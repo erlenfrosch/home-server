@@ -64,17 +64,6 @@ tailscale_hostname: "{{ hostname }}"
 # ---- Local network ----------------------------------------
 local_subnet: "192.168.178.0/24"
 
-# ---- dnsmasq DNS entries ----------------------------------
-# Jeder Eintrag wird als <name>.homeserver → network_static_ip aufgelöst.
-# Neuen Service hinzufügen: Name eintragen, `make install --tags dnsmasq` ausführen.
-dnsmasq_hosts:
-  - headlamp
-  - argocd
-  - semaphore
-  - grafana
-  - kubeseal-webgui
-  - gotify
-
 # ---- Semaphore UI -----------------------------------------
 # Master Ansible-Vault password — same value you type when running
 # `ansible-playbook --ask-vault-pass`. Semaphore uses this so playbooks

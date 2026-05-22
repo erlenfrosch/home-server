@@ -160,19 +160,6 @@
     path: /tmp/semaphore-bootstrap-secret.yaml
     state: absent
 
-# ---- Add semaphore.homeserver to dnsmasq ------------------
-# Defensive: if `semaphore` isn't already in dnsmasq_hosts, warn the
-# operator. We don't mutate group_vars from here — that's their config.
-- name: Warn if `semaphore` is missing from dnsmasq_hosts
-  ansible.builtin.debug:
-    msg: >
-      `semaphore` is not listed in `dnsmasq_hosts` in group_vars/all.yml.
-      Add it and re-run with `--tags dnsmasq` so semaphore.homeserver
-      resolves on your LAN.
-  when:
-    - dnsmasq_hosts is defined
-    - "'semaphore' not in dnsmasq_hosts"
-
 # ---- Operator summary -------------------------------------
 - name: Display Semaphore bootstrap summary
   ansible.builtin.debug:
