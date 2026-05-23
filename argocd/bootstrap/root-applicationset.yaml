@@ -13,7 +13,7 @@ spec:
   goTemplateOptions: ["missingkey=error"]
   generators:
     - git:
-        repoURL: https://github.com/Jaydee94/home-server.git
+        repoURL: https://github.com/erlenfrosch/home-server.git
         revision: HEAD
         directories:
           - path: "argocd/apps/*"
@@ -23,7 +23,7 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/Jaydee94/home-server.git
+        repoURL: https://github.com/erlenfrosch/home-server.git
         targetRevision: HEAD
         path: "{{.path.path}}"
       destination:

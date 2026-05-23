@@ -346,7 +346,6 @@ make tailscale      # VPN role
 make k3s            # Kubernetes + Helm role
 make argocd         # GitOps controller role
 make dnsmasq        # Split-DNS for *.homeserver on LAN + tailscale0
-make scanner        # Bare-metal Fujitsu scanner + scanbd + SMB mount
 make semaphore      # Bootstrap Semaphore Secret on the home-server
 make semaphore-targets  # Push Semaphore SSH key to all managed targets
 make semaphore-bootstrap # Provision Projects/Repos/Inventories/Templates in Semaphore via API
@@ -362,7 +361,7 @@ make clean          # Remove cached Ansible collections and temp artifacts
 ```
 Ansible (provisioning)
   └── ansible/site.yml          ← entry point; roles run in this order:
-        common → dnsmasq → tailscale → k3s → argocd → scanner → semaphore_secrets
+        common → dnsmasq → tailscale → k3s → argocd → semaphore_secrets
   └── ansible/group_vars/all.yml ← ALL configuration knobs; vault-encrypted secrets live here
   └── ansible/inventory/hosts.yml ← server address
 
@@ -391,10 +390,10 @@ git add argocd/apps/my-app && git commit -m "feat(apps): add my-app" && git push
 
 ```bash
 # SSH into the server
-ssh -i ~/.ssh/id_ed25519 jaydee@192.168.178.127
+ssh -i ~/.ssh/id_ed25519 erlenfrosch@192.168.1.109
 
 # kubectl (local context may point elsewhere — always go via SSH)
-ssh -i ~/.ssh/id_ed25519 jaydee@192.168.178.127 'sudo kubectl ...'
+ssh -i ~/.ssh/id_ed25519 erlenfrosch@192.168.1.109 'sudo kubectl ...'
 ```
 
 ## Service URLs
@@ -409,7 +408,7 @@ ssh -i ~/.ssh/id_ed25519 jaydee@192.168.178.127 'sudo kubectl ...'
 
 ```bash
 # Retrieve Grafana admin password:
-ssh -i ~/.ssh/id_ed25519 jaydee@192.168.178.127 \
+ssh -i ~/.ssh/id_ed25519 erlenfrosch@192.168.1.109 \
   'sudo kubectl -n monitoring get secret monitoring-grafana \
    -o jsonpath="{.data.admin-password}" | base64 -d; echo'
 ```
@@ -450,28 +449,7 @@ The Tailscale auth key (`tailscale_auth_key`) must always be vault-encrypted. Ne
 | `dnsmasq_hosts` | Names served under `*.homeserver` by dnsmasq |
 | `semaphore_vault_password` | Vault-encrypted Ansible Vault password Semaphore uses to decrypt secrets in triggered playbooks |
 | `semaphore_projects` | Optional list of additional Semaphore projects/templates to bootstrap |
-| `scanner_smb_share` | NAS share path for the Paperless consume directory |
-| `scanner_smb_username` | SMB user (password is vault-encrypted) |
-| `scanner_smb_password` | Vault-encrypted SMB password for the share |
-| `scanner_usb_vendor_id` / `scanner_usb_product_id` | USB IDs of the scanner (`lsusb`) |
-| `scanner_gotify_enabled` | Toggle Gotify push notifications from the scan pipeline |
-| `scanner_gotify_url` / `scanner_gotify_token` | Gotify endpoint + (vault-encrypted) app token |
 | `gotify_admin_password` | Optional vault-stored copy of the Gotify admin password |
-
-## Scanner / Paperless Ingestion
-
-- Fujitsu USB-Scanner sits directly on the home-server; `scanbd` runs as a
-  bare-metal systemd service hardened via drop-in (`User=saned`, `Group=scanner`,
-  `ProtectSystem=strict`, etc.) and the host's udev rule grants USB access via
-  `GROUP=scanner, MODE=0660, TAG+="uaccess"` instead of root.
-- Hardware button → `scanbd` detects → `scan_button.sh` touches trigger flag →
-  `scanner-trigger.path` (inotify) → `scanner-trigger.service` stops scanbd, runs
-  `scan-trigger.sh` as `saned`, restarts scanbd via `trap EXIT` → PDF lands on
-  `/mnt/paperless-consume` (UGREEN NAS).
-- Paperless-NGX still runs on the UGREEN NAS and ingests from that directory.
-- An hourly `scanner-healthcheck.timer` re-mounts the share if it disappears
-  and probes the scanner via `scanimage -L`.
-- Full setup + verification + troubleshooting checklist: [`docs/10-scanner.md`](docs/10-scanner.md).
 
 ## Monitoring
 
@@ -494,12 +472,7 @@ The Tailscale auth key (`tailscale_auth_key`) must always be vault-encrypted. Ne
 - **Semaphore vault-password rotation**: `semaphore_vault_password` in `group_vars/all.yml` is pushed into Semaphore as a `login_password` key named `vault-password` and referenced from every template via `vault_key_id`. To rotate: (1) edit the encrypted value with `make vault-edit`, (2) delete the `vault-password` key in each project via the Semaphore UI, (3) re-run `make semaphore-bootstrap` — the role recreates the key and the template-update step re-wires every template's `vault_key_id` automatically.
 - **Semaphore templates self-heal on bootstrap**: `tasks/template.yml` issues `PUT /api/project/{id}/templates/{tid}` for any template that already exists, with the full desired body. This is what fixes pre-existing templates whose `vault_key_id` is NULL because they were created before the vault-password wiring landed. The PUT uses `changed_when: false` because `uri` otherwise reports `changed` on every successful PUT even when the row is unchanged.
 - **Semaphore targets — SSH key prerequisite**: Before running `make semaphore-targets`, the Semaphore SSH public key must be authorized on each managed target. Fetch the pubkey from the server (`sudo cat /etc/semaphore-secrets/id_ed25519.pub`) and add it via `ssh-copy-id` or directly to `~/.ssh/authorized_keys` on the target host.
-- **Running semaphore-bootstrap locally on the server**: `make semaphore-bootstrap-local` runs the same playbook with `--connection local` so no SSH back to self is needed — useful when you're already SSH'd into the home-server. Relies on jaydee's passwordless sudo (configured by the `common` role). For non-interactive runs (cron, scripts), skip the vault prompt with `VAULT_OPTS="--vault-password-file=$HOME/.vault_pass"` (chmod 600).
-- **Scanner — `scanner_usb_product_id` must be set**: leaving it empty makes the role fail in pre-flight on purpose. A wildcard udev rule that matched every device with the same vendor would be worse than failing loudly. Run `lsusb` on the host and paste both IDs into `group_vars/all.yml`.
-- **Scanner — first run needs the NAS reachable**: `_netdev,nofail,x-systemd.automount` keeps the host boot non-fatal when the NAS is down, but `make scanner` itself calls `ansible.posix.mount state=mounted` which actually performs the mount. Bring the NAS up before the first run, or skip the mount task with `--skip-tags scanner` until the NAS is back.
-- **Scanner — ImageMagick refuses PDFs by default**: Debian/Ubuntu ship `policy.xml` with `rights="none" pattern="PDF"`. The role appends an `ANSIBLE MANAGED` block after that line; ImageMagick reads top-to-bottom and the last matching policy wins. Do not delete the upstream `rights="none"` line — that would break the package's conffile handling on upgrades.
-- **Scanner — scanbd hält USB exklusiv (direct mode)**: `scanbd` im direct mode hält das USB-Interface via `ioctl(USBDEVFS_CLAIMINTERFACE)`. `scanimage` schlägt mit `LIBUSB_ERROR_BUSY` fehl solange scanbd läuft. Diagnose: `SANE_DEBUG_SANEI_USB=1 scanimage -L`. Lösung: scanbd stoppen, scannen, neu starten — das macht `scanner-trigger.service` automatisch.
-- **Scanner — SANE_CONFIG_DIR beim Ausführen als saned**: Wird ein Skript via `runuser -u saned` gestartet, liest SANE `/etc/scanbd/dll.conf` (net-Backend) statt `/etc/sane.d/dll.conf` (fujitsu-Backend). Fix: `runuser -u saned -- env SANE_CONFIG_DIR=/etc/sane.d script`.
+- **Running semaphore-bootstrap locally on the server**: `make semaphore-bootstrap-local` runs the same playbook with `--connection local` so no SSH back to self is needed — useful when you're already SSH'd into the home-server. Relies on erlenfrosch's passwordless sudo (configured by the `common` role). For non-interactive runs (cron, scripts), skip the vault prompt with `VAULT_OPTS="--vault-password-file=$HOME/.vault_pass"` (chmod 600).
 - **Ansible-Templates — Jinja2 `trim_blocks` + `{% raw %}`**: Ansible setzt `trim_blocks=True`. Das `\n` nach `{% endraw %}` wird gestrippt — die folgende Zeile klebt direkt an den Raw-Inhalt. `{% endraw %}` immer auf einer eigenen Zeile platzieren, sodass das `\n` innerhalb des Raw-Blocks erhalten bleibt. Symptom: `line N: syntax error near unexpected token` in Bash-Skripten.
 
 ## Claude Skills

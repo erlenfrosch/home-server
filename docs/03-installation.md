@@ -17,11 +17,9 @@ Verifikation eines lauffähigen Clusters mit ArgoCD und Tailscale.
 ## Schritt 1 — Repository klonen
 
 ```bash
-git clone https://github.com/Jaydee94/home-server.git
+git clone https://github.com/erlenfrosch/home-server.git
 cd home-server
 ```
-
-Bei einem Fork stattdessen die URL des Forks verwenden.
 
 ---
 

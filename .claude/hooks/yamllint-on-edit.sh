@@ -8,4 +8,4 @@ file=$(echo "$CLAUDE_TOOL_INPUT" | python3 -c "import sys,json; d=json.load(sys.
 # Skip Helm templates (yamllint can't parse {{ }} syntax)
 [[ "$file" == */templates/* ]] && exit 0
 
-yamllint -c /home/jaydee/git/home-server/.yamllint "$file"
+yamllint -c /home/erlenfrosch/repos/home-server/.yamllint "$file"

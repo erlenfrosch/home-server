@@ -14,9 +14,9 @@ nie wieder eine YAML-Datei an, um eine neue Aktion auszulösen.
   ([Wichtiger Hintergrund zur DNS-Topologie und warum der Home-Server
   *nicht* der LAN-DNS-Server sein sollte → docs/09-dns-architecture.md](09-dns-architecture.md))
 - Ein-Klick-Run von Playbooks aus beliebigen Git-Repos
-  (z.B. `home-server`, `ugreen-paperless`, später beliebig viele mehr).
+  (z.B. `home-server`, beliebig viele weitere).
 - Geteilter SSH-Key, der von Ansible verwaltet und automatisch auf alle
-  konfigurierten Targets (Raspberry Pi, UGREEN NAS, …) verteilt wird.
+  konfigurierten Targets verteilt wird.
 - Geteiltes Ansible-Vault-Password, sicher in einem k8s Secret abgelegt.
 
 ### Zugriff über Tailscale (einmaliger Admin-Schritt)
@@ -29,7 +29,7 @@ dass deine Tailscale-Clients den Home-Server als Nameserver für die
    Tailscale-IP ist aus dem Tailnet überall direkt erreichbar, ohne
    dass Subnet-Routes auf jedem Client aktiviert werden müssen):
    ```bash
-   ssh jaydee@homeserver "tailscale ip -4"
+   ssh erlenfrosch@192.168.1.109 "tailscale ip -4"
    # z.B. 100.78.12.34
    ```
 2. [Tailscale Admin Console → DNS](https://login.tailscale.com/admin/dns)
@@ -48,12 +48,12 @@ dass deine Tailscale-Clients den Home-Server als Nameserver für die
 Test (vom Tailscale-Client):
 ```bash
 nslookup semaphore.homeserver
-# Expected: 192.168.178.127  (von dnsmasq aufgelöst)
+# Expected: 192.168.1.109  (von dnsmasq aufgelöst)
 ```
 
 Falls die Auflösung nicht klappt: prüfe auf dem Server
 `sudo ss -lntu | grep :53` — dnsmasq sollte sowohl auf
-`192.168.178.127:53` als auch auf `100.x.y.z:53` (tailscale0) lauschen.
+`192.168.1.109:53` als auch auf `100.x.y.z:53` (tailscale0) lauschen.
 
 ## Architektur in zehn Sekunden
 
@@ -90,23 +90,24 @@ ansible-vault encrypt_string 'DEIN_VAULT_PW' \
 Den `!vault |…`-Block über den leeren Wert in
 `ansible/group_vars/all.yml` (`semaphore_vault_password`) pasten.
 
-### 2. Targets in der Inventory eintragen
+### 2. Targets in der Inventory eintragen (optional)
 
-`ansible/inventory/hosts.yml`:
+Wenn du weitere Hosts via Semaphore verwalten willst, trage sie in
+`ansible/inventory/hosts.yml` unter `semaphore_targets` ein:
 
 ```yaml
+# Beispiel: weiteren Linux-Host eintragen
+semaphore_targets:
+  children:
+    homeservers:
+    raspberry_pis:
+
 raspberry_pis:
   hosts:
     pi-livingroom:
-      ansible_host: 192.168.178.50
+      ansible_host: 192.168.1.50
       ansible_user: pi
       ansible_ssh_private_key_file: ~/.ssh/id_ed25519
-
-ugreen_nas:
-  hosts:
-    ugreen:
-      ansible_host: 192.168.178.40
-      ansible_user: jaydee
 ```
 
 ### 3. Playbook laufen lassen
@@ -134,7 +135,7 @@ SSH pubkey: /etc/semaphore-secrets/id_ed25519.pub
 Admin-Passwort einmalig auslesen:
 
 ```bash
-ssh jaydee@homeserver "sudo cat /etc/semaphore-secrets/admin_password"
+ssh erlenfrosch@192.168.1.109 "sudo cat /etc/semaphore-secrets/admin_password"
 ```
 
 ### 4. ArgoCD wartet & deployt
@@ -148,22 +149,21 @@ kubectl -n semaphore get pods,svc,ingress
 
 ## Projekte werden automatisch angelegt
 
-Nach `make install` (genauer: nach der Rolle `semaphore_bootstrap`) sind in
-Semaphore **zwei Projekte schon vollständig konfiguriert** — Key Store,
+Nach `make install` (genauer: nach der Rolle `semaphore_bootstrap`) ist in
+Semaphore **ein Projekt schon vollständig konfiguriert** — Key Store,
 Repository, Inventory und Task Template inklusive. Du musst in der UI
 nichts mehr klicken außer ▶ **Run**.
 
-| Project              | Repository                                                | Inventory   | Template                  | Playbook              |
-|----------------------|-----------------------------------------------------------|-------------|---------------------------|-----------------------|
-| `home-server`        | dieses Repo (`argocd_repo_url` aus `group_vars/all.yml`)  | `homeservers` (192.168.178.127) | `Deploy Home Server`      | `ansible/site.yml`    |
-| `ugreen-paperless`   | `https://github.com/Jaydee94/ugreen-paperless.git`        | `ugreen-nas` (192.168.178.118)  | `Deploy ugreen-paperless` | `ugreen-paperless.yml`|
+| Project              | Repository                                               | Inventory                      | Template             | Playbook           |
+|----------------------|----------------------------------------------------------|--------------------------------|----------------------|--------------------|
+| `home-server`        | dieses Repo (`argocd_repo_url` aus `group_vars/all.yml`) | `homeservers` (192.168.1.109)  | `Deploy Home Server` | `ansible/site.yml` |
 
 ### Workflow
 
 1. Browser auf `http://semaphore.homeserver`.
 2. Login mit `admin` + Passwort aus `/etc/semaphore-secrets/admin_password`:
    ```bash
-   ssh jaydee@homeserver "sudo cat /etc/semaphore-secrets/admin_password"
+   ssh erlenfrosch@192.168.1.109 "sudo cat /etc/semaphore-secrets/admin_password"
    ```
 3. **Passwort sofort ändern** (oben rechts → Settings → Change Password).
    ⚠️ Wenn du das tust, kann das nächste `make semaphore-bootstrap` sich

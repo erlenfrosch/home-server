@@ -104,7 +104,7 @@ ansible-playbook -i ansible/inventory/hosts.yml ansible/site.yml \
 
 Alternativ: Config direkt auf dem Server testen (kein Vault nötig):
 ```bash
-ssh -i ~/.ssh/id_ed25519 jaydee@192.168.178.127
+ssh -i ~/.ssh/id_ed25519 erlenfrosch@192.168.1.109
 
 # Config-Syntax prüfen:
 sudo scanbd -d 7 2>&1 | head -30
@@ -126,7 +126,7 @@ sudo journalctl -u scanbd -f
 
 Nach erfolgreichem Scanner-Deploy: Semaphore-SSH-Pubkey auf UGREEN NAS pushen.
 ```bash
-ssh -i ~/.ssh/id_ed25519 jaydee@192.168.178.127 \
+ssh -i ~/.ssh/id_ed25519 erlenfrosch@192.168.1.109 \
   'sudo cat /etc/semaphore-secrets/id_ed25519.pub'
 # Pubkey → ~/.ssh/authorized_keys auf der NAS (192.168.178.118)
 # Dann: make semaphore-targets
@@ -136,10 +136,10 @@ ssh -i ~/.ssh/id_ed25519 jaydee@192.168.178.127 \
 
 ```bash
 # Home-Server SSH
-ssh -i ~/.ssh/id_ed25519 jaydee@192.168.178.127
+ssh -i ~/.ssh/id_ed25519 erlenfrosch@192.168.1.109
 
 # kubectl immer über SSH
-ssh -i ~/.ssh/id_ed25519 jaydee@192.168.178.127 'sudo kubectl ...'
+ssh -i ~/.ssh/id_ed25519 erlenfrosch@192.168.1.109 'sudo kubectl ...'
 ```
 
 | Service   | URL                        |

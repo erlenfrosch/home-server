@@ -21,7 +21,7 @@
 
 ```bash
 # 1) Repo klonen
-git clone https://github.com/Jaydee94/home-server.git && cd home-server
+git clone https://github.com/erlenfrosch/home-server.git && cd home-server
 
 # 2) Eigene Details eintragen (Server-IP, Repo-URL, Tailscale-Key)
 $EDITOR ansible/inventory/hosts.yml
@@ -48,7 +48,6 @@ Am Ende druckt das Playbook die ArgoCD-URL und das Admin-Passwort. Fertig.
 | Monitoring       | **VictoriaMetrics + Grafana**          | Single-Node TSDB, vmagent, vmalert, Alertmanager, Dashboards           |
 | Kubernetes-UI    | **Headlamp**                           | Browser-Dashboard für den Cluster                                      |
 | Secrets          | **Sealed Secrets + kubeseal-webgui**   | Verschlüsselte Secrets in Git, nur im Cluster entschlüsselbar          |
-| Dokumenten-Scan  | **scanbd + Fujitsu USB-Scanner**       | Bare-Metal-Scan-Daemon → CIFS → Paperless-NGX auf der NAS              |
 | Notifications    | **Gotify**                             | Self-hosted Push-Notifications (Android/iOS-Client)                    |
 | Remote-Access    | **Tailscale**                          | WireGuard-Mesh-VPN — keine Portfreigaben, keine öffentliche IP         |
 | Ingress          | **Traefik v2** (mit k3s gebundled)     | HTTP/HTTPS-Routing in den Cluster                                      |
@@ -79,7 +78,7 @@ Für reproduzierbare Builds `auto_upgrade: false` in `ansible/group_vars/all.yml
 **1. Repo klonen**
 
 ```bash
-git clone https://github.com/Jaydee94/home-server.git
+git clone https://github.com/erlenfrosch/home-server.git
 cd home-server
 ```
 
@@ -141,7 +140,6 @@ home-server/
 │   ├── 07-troubleshooting.md         # Häufige Probleme
 │   ├── 08-semaphore.md               # Semaphore-Web-UI für Ansible
 │   ├── 09-dns-architecture.md        # Split-DNS-Design & Ausfallsicherheit
-│   ├── 10-scanner.md                 # Fujitsu-Scanner + scanbd + Paperless
 │   ├── 11-gotify.md                  # Push-Notifications via Gotify
 │   └── assets/banner.svg
 ├── ansible/
@@ -156,7 +154,6 @@ home-server/
 │       ├── tailscale/                # VPN (WireGuard-Mesh)
 │       ├── k3s/                      # Single-Node-Kubernetes + Helm
 │       ├── argocd/                   # GitOps-Controller via Helm
-│       ├── scanner/                  # Fujitsu-USB-Scanner + scanbd + SMB
 │       ├── semaphore_secrets/        # Bootstrap-Secret für den Semaphore-Pod
 │       ├── semaphore_targets/        # SSH-Pubkey auf Managed-Hosts pushen
 │       └── semaphore_bootstrap/      # Projects/Inventories/Templates per API
@@ -168,7 +165,6 @@ home-server/
         ├── headlamp/                       # Kubernetes-Web-Dashboard
         ├── kubeseal-webgui/                # Sealed-Secrets-Verschlüsselungs-UI
         ├── monitoring/                     # VictoriaMetrics + Grafana
-        ├── paperless-ai/                   # KI-Dokumentenanalyse für Paperless-NGX
         ├── sealed-secrets/                 # SealedSecrets-Controller
         └── semaphore/                      # Ansible-Web-UI
 ```

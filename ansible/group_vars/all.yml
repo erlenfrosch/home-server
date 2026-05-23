@@ -5,7 +5,7 @@
 # ============================================================
 
 # ---- Server identity ---------------------------------------
-hostname: homeserver
+hostname: erlenfrosch-lab
 timezone: Europe/Berlin                # CHANGE: your timezone
 
 # ---- Upgrade strategy --------------------------------------
@@ -42,7 +42,7 @@ argocd_version: ""
 argocd_namespace: argocd
 argocd_server_insecure: true
 # Git repo ArgoCD pulls from. Must be reachable by argocd-repo-server pod.
-argocd_repo_url: "https://github.com/Jaydee94/home-server.git"   # CHANGE if you forked
+argocd_repo_url: "https://github.com/erlenfrosch/home-server.git"
 argocd_repo_revision: HEAD
 
 # ---- Tailscale ---------------------------------------------
@@ -52,17 +52,17 @@ argocd_repo_revision: HEAD
 # then paste the resulting `!vault |` block over the value below.
 tailscale_auth_key: !vault |
           $ANSIBLE_VAULT;1.1;AES256
-          32326136363530346431653061613536623865653235613933653634623030656664396333643663
-          6532373339613461656334363131656232336638393063350a666365636134363935333833303165
-          31363564363865663031356334616233306335333338343633333234376634636662316239306536
-          3935623934383737640a386362353836336136613961653661393138656130386335373237666337
-          30313862303036646437666263616365643062316239326132613365336636386234633634363432
-          31313761323532383432643737326330333631373939363334383833616161663536393433386137
-          333862306665313536613562376464613461
+          66303736646266393364643161333631396366623035316134303835376535656538353336396539
+          3863626362373634396237623637383431323965633033320a613437643661393636333735333131
+          66663334373030373234353531303332303363326430343830356635653034323736336566363638
+          3339343934663737380a666435633638643831303161653538303030633330663339633739343330
+          30383432363062363838616537333762396535306234393739393363303339323434393837623038
+          62333331613739623835663035323635383965373866306139663730663533343332386133343466
+          366132623933343037346263306566386333
 tailscale_hostname: "{{ hostname }}"
 
 # ---- Local network ----------------------------------------
-local_subnet: "192.168.178.0/24"
+local_subnet: "192.168.1.0/24"
 
 # ---- Semaphore UI -----------------------------------------
 # Master Ansible-Vault password — same value you type when running
@@ -74,67 +74,28 @@ local_subnet: "192.168.178.0/24"
 #   then paste the resulting `!vault |` block over the value below.
 semaphore_vault_password: !vault |
           $ANSIBLE_VAULT;1.1;AES256
-          34366462666430616162393037613935373364666564323933656533353961336262336130333735
-          3635333135613265666534353030643362623933663633320a373730633261303766616134376539
-          65333537343963356237356265306462303432356530623732363037343833386131613439386663
-          3637353530353538660a633234343661316332626135623264366564356337653733613763396663
-          3664
+          34323031656135333133633232643438653163656432386635346236316563316366633030653561
+          6336373438363361306631306437636136306233303861390a316262356532613330646661346233
+          64663234303661623466653865366637663061353333376635313233373530356265396265626361
+          6535633735636532660a333338623065666435623461326335313133356237383935656365306135
+          3764
 
 # ---- Semaphore projects (auto-bootstrap) ------------------
 # After Semaphore is reachable, the `semaphore_bootstrap` role calls the
-# Semaphore REST API and idempotently creates two projects:
+# Semaphore REST API and idempotently creates the home-server project.
 #
-#   - home-server      (this repo, deployed against the home-server itself)
-#   - ugreen-paperless (https://github.com/Jaydee94/ugreen-paperless.git
-#                       deployed to the UGREEN NAS)
-#
-# To add a third project, copy/extend the `semaphore_projects` list from
+# To add more projects, copy/extend the `semaphore_projects` list from
 # ansible/roles/semaphore_bootstrap/defaults/main.yml here. The role only
 # creates resources that don't already exist — to change an existing one,
 # delete it in the UI and re-run `make semaphore-bootstrap`.
-
-# ---- Scanner / Paperless Ingestion ------------------------
-# Fujitsu USB-Scanner direkt am Home-Server; scanbd hört auf den
-# Hardware-Button und schreibt Scans als PDF in den SMB-Share der
-# UGREEN NAS, von wo Paperless-NGX sie automatisch einliest.
-# Vollständige Migrations-Checkliste: docs/10-scanner.md.
-#
-# USB-IDs auf dem Host ermitteln (`lsusb | grep -i fujitsu`):
-scanner_usb_vendor_id: "04c5"
-scanner_usb_product_id: "132b"
-#
-# Das SMB-Passwort MUSS vault-encrypted sein. Hinweis in docs/10-scanner.md.
-#   ansible-vault encrypt_string 'DEIN_SMB_PASSWORT' \
-#     --name 'scanner_smb_password'
-scanner_smb_share: "//192.168.178.118/personal_folder/paperless/consume"
-scanner_smb_username: "jaydee"
-scanner_smb_password: !vault |
-          $ANSIBLE_VAULT;1.1;AES256
-          38376337663562376365653235303832613263333763356130346266356331326132356536336134
-          3230613564363762396363613562353162313930613439660a383361653563353236633465383337
-          65666435303130383263333464636365393238346334373637646465313263326263613262333037
-          3832393035343733340a633837356264323030323132613962636366633839373262373839386238
-          3261
 
 # ---- Gotify push notifications ----------------------------
 # Cluster-App: argocd/apps/gotify (Helm-Chart). Workflow + kubeseal-Schritte
 # stehen in docs/11-gotify.md.
 #
-# 1) Admin-Passwort für das initiale Login (SealedSecret im Cluster):
-#    ansible-vault encrypt_string 'DEIN_ADMIN_PW' --name 'gotify_admin_password'
+# Admin-Passwort für das initiale Login (SealedSecret im Cluster):
+#   ansible-vault encrypt_string 'DEIN_ADMIN_PW' --name 'gotify_admin_password'
 # gotify_admin_password: !vault | ...
-#
-# 2) App-Token aus dem Gotify-Web-UI (Applications → Create → "Scanner"):
-#    ansible-vault encrypt_string 'AppTokenXXX' --name 'scanner_gotify_token'
-scanner_gotify_enabled: true
-scanner_gotify_url: "http://gotify.homeserver"
-scanner_gotify_token: !vault |
-          $ANSIBLE_VAULT;1.1;AES256
-          65623337633331656466393962373263323334643031626530393466373661636437653430666132
-          6536366237353232363563636331323332306265633035360a653737353937613363633530613639
-          33616332386161373662316262393030663863366161346637303731623936313233623631616162
-          3237653831646364620a666135303263366465323436656139303161343732326261313030646564
-          6437
 
 # ---- Optional: configure a static IP via Netplan ----------
 # Set to true to have Ansible deploy /etc/netplan/99-static.yaml.
@@ -143,9 +104,9 @@ scanner_gotify_token: !vault |
 # (or update it after the first run).
 network_configure_static_ip: false
 network_interface: "eno1"              # CHANGE: run `ip link show` on the server
-network_static_ip: "192.168.178.127"
+network_static_ip: "192.168.1.109"
 network_prefix_length: 24              # 24 = /24 = 255.255.255.0
-network_gateway: "192.168.178.1"
+network_gateway: "192.168.1.1"
 network_dns:
   - "1.1.1.1"
   - "8.8.8.8"

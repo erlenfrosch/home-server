@@ -3,7 +3,7 @@ name: cluster-health
 description: SSH into the home server and report full cluster health — node status, ArgoCD app sync/health, unhealthy pods, high-restart pods, and PVC status. Summarize findings and flag anything requiring attention.
 ---
 
-Run all checks below via SSH (`ssh -i ~/.ssh/id_ed25519 jaydee@192.168.178.127`) and produce a concise health report. Flag anything that is not Synced+Healthy, not Running/Completed, or showing ≥5 restarts.
+Run all checks below via SSH (`ssh -i ~/.ssh/id_ed25519 erlenfrosch@192.168.1.109`) and produce a concise health report. Flag anything that is not Synced+Healthy, not Running/Completed, or showing ≥5 restarts.
 
 ## Checks
 
